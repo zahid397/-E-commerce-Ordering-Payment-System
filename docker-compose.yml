@@ -1,0 +1,49 @@
+# Local full-stack development / demo environment.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ecommerce
+      POSTGRES_PASSWORD: ecommerce_dev_pw
+      POSTGRES_DB: ecommerce_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecommerce -d ecommerce_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://ecommerce:ecommerce_dev_pw@db:5432/ecommerce_db
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-dev_only_change_me}
+      JWT_EXPIRES_IN: 1d
+      PORT: 5000
+      NODE_ENV: production
+      CORS_ORIGIN: "*"
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      BKASH_BASE_URL: ${BKASH_BASE_URL:-https://tokenized.sandbox.bka.sh/v1.2.0-beta}
+      BKASH_USERNAME: ${BKASH_USERNAME:-sandboxTokenizedUser02}
+      BKASH_PASSWORD: ${BKASH_PASSWORD:-sandboxTokenizedUser02@12345}
+      BKASH_APP_KEY: ${BKASH_APP_KEY:-4f6o0cjiki2rfm34kfdadl1eqq}
+      BKASH_APP_SECRET: ${BKASH_APP_SECRET:-2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3fug4b}
+      BKASH_CALLBACK_URL: ${BKASH_CALLBACK_URL:-http://localhost:5000/api/v1/payments/bkash/callback}
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
